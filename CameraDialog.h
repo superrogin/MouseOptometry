@@ -42,4 +42,8 @@ public:
 	bool m_viewCalibration;
 	double m_zoom;
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	bool m_isVideo;
+	Point2f m_prevMc;
+	Point2f m_prevPntNose;
+	bool m_isExperimentStarted;
 };

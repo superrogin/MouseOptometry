@@ -11,12 +11,11 @@
 #define new DEBUG_NEW
 #endif
 
-
-
 // COptometryDlg 대화 상자
 
 COptometryDlg::COptometryDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_DIALOG_MAIN, pParent)
+	, m_valueScreenMode(0)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	m_calX = 1000;
@@ -34,6 +33,7 @@ void COptometryDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_LIST_MAIN, m_mainList);
 	DDX_Control(pDX, IDC_TAB_MAIN, m_mainTab);
+	DDX_Radio(pDX, IDC_RADIO_SCREEN_MODE1, m_valueScreenMode);
 }
 
 BEGIN_MESSAGE_MAP(COptometryDlg, CDialogEx)
@@ -47,6 +47,12 @@ BEGIN_MESSAGE_MAP(COptometryDlg, CDialogEx)
 	ON_COMMAND(ID_FILE_OPENVIDEOFILE, &COptometryDlg::OnFileOpenvideofile)
 	ON_COMMAND(ID_VIEW_SHOWSCREEN, &COptometryDlg::OnViewShowscreen)
 	ON_COMMAND(ID_VIEW_SHOWSAMPLESCREEN, &COptometryDlg::OnViewShowsamplescreen)
+	ON_WM_TIMER()
+	ON_COMMAND(ID_PRESS1, &COptometryDlg::OnPress1)
+	ON_COMMAND(ID_PRESS2, &COptometryDlg::OnPress2)
+	ON_COMMAND(ID_PRESS3, &COptometryDlg::OnPress3)
+	ON_COMMAND(ID_PRESS4, &COptometryDlg::OnPress4)
+	ON_WM_SHOWWINDOW()
 END_MESSAGE_MAP()
 
 
@@ -66,6 +72,8 @@ BOOL COptometryDlg::OnInitDialog()
 	/*CString tst;
 	tst.Format(L"%5.5f", atan2(3.3,3.3));
 	AfxMessageBox(tst);*/
+
+	m_hAccelTable = ::LoadAccelerators(AfxGetInstanceHandle(), MAKEINTRESOURCE(IDR_ACCELERATOR1));
 
 	//변수초기화
 	m_isScreenOn = 0;
@@ -114,6 +122,9 @@ BOOL COptometryDlg::OnInitDialog()
 	pCheck = (CButton*)GetDlgItem(IDC_RADIO_SCREEN_MODE4);
 	pCheck->SetBitmap(LoadBitmap(AfxGetInstanceHandle(), MAKEINTRESOURCE(IDB_BITMAP_SCREEN_MODE4)));
 	pCheck->SetCheck(true);
+
+	m_valueScreenMode = 3;
+	UpdateData(FALSE);
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
@@ -221,8 +232,11 @@ HBRUSH COptometryDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
 BOOL COptometryDlg::PreTranslateMessage(MSG* pMsg)
 {
 	// TODO: 여기에 특수화된 코드를 추가 및/또는 기본 클래스를 호출합니다.
-	 if(pMsg->wParam == VK_RETURN || pMsg->wParam == VK_ESCAPE)
-          return TRUE;
+	 if(pMsg->wParam == VK_RETURN|| pMsg->wParam == VK_ESCAPE)
+		 return TRUE;
+	 if (m_hAccelTable != NULL)
+		 if (TranslateAccelerator(m_hWnd, m_hAccelTable, pMsg))
+			 return TRUE;
 	return CDialogEx::PreTranslateMessage(pMsg);
 }
 
@@ -299,28 +313,61 @@ void COptometryDlg::OnFileOpenvideofile()
 	m_dlgCamera.openVideoFile();
 }
 
-
 void COptometryDlg::onThread(COptometryDlg* pDlg, int idx)
 {
-	double driftedTime = pDlg->m_tab1_stimulus.m_driftSpeed * GetTickCount() * 0.0001;
-	int drawWidth = 800;
-	double spaFreq = pDlg->m_tab1_stimulus.m_spatialFrequency;
-	double contrast = pDlg->m_tab1_stimulus.m_contrast;
-	double pixelRatio = m_footholdDiameter / m_calDiameter;
-	double finalX = pixelRatio*(-(m_calX - 1000) / 2000.0*m_dlgCamera.m_capture.get(CAP_PROP_FRAME_WIDTH) + m_stimulusX);
-	double finalY = pixelRatio*((m_calY - 1000) / 2000.0*m_dlgCamera.m_capture.get(CAP_PROP_FRAME_HEIGHT) - m_stimulusY);
-	pDlg->m_slitScreen[idx]->bufferedDraw(driftedTime, drawWidth, finalX, finalY, spaFreq, 0.128*contrast, m_monitorSize, m_monitorPosition);
+	if (m_isScreenOn == 1)
+	{
+		switch (m_valueScreenMode)
+		{
+		case 0:
+			pDlg->m_slitScreen[idx]->constantDraw(0);
+			break;
+		case 1:
+			pDlg->m_slitScreen[idx]->constantDraw(128);
+			break;
+		case 2:
+			pDlg->m_slitScreen[idx]->constantDraw(255);
+			break;
+		case 3:
+			double driftedTime = pDlg->m_tab1_stimulus.m_driftSpeed * GetTickCount() * 0.0001;
+			int drawWidth = 800;
+			double spaFreq = pDlg->m_tab1_stimulus.m_spatialFrequency;
+			double contrast = pDlg->m_tab1_stimulus.m_contrast;
+			double pixelRatio = m_footholdDiameter / m_calDiameter;
+			double finalX = pixelRatio*(-(m_calX - 1000.0) / 2000.0*m_dlgCamera.m_capture.get(CAP_PROP_FRAME_WIDTH) + m_stimulusX);
+			double finalY = pixelRatio*((m_calY - 1000.0) / 2000.0*m_dlgCamera.m_capture.get(CAP_PROP_FRAME_HEIGHT) - m_stimulusY);
+			pDlg->m_slitScreen[idx]->bufferedDraw(driftedTime, drawWidth, finalX, finalY, spaFreq, 0.128*contrast, m_monitorSize, m_monitorPosition);
+			break;
+		}
+	}
 }
 
 void COptometryDlg::onSampleThread(COptometryDlg* pDlg)
 {
-	double driftedTime = pDlg->m_tab1_stimulus.m_driftSpeed * GetTickCount() * 0.0001;
-	double spaFreq = pDlg->m_tab1_stimulus.m_spatialFrequency;
-	double contrast = pDlg->m_tab1_stimulus.m_contrast;
-	double pixelRatio = m_footholdDiameter / m_calDiameter;
-	double finalX = pixelRatio*(-(m_calX-1000) / 2000.0*m_dlgCamera.m_capture.get(CAP_PROP_FRAME_WIDTH) + m_stimulusX);
-	double finalY = pixelRatio*((m_calY-1000) / 2000.0*m_dlgCamera.m_capture.get(CAP_PROP_FRAME_HEIGHT) - m_stimulusY);
-	pDlg->m_sampleScreen->bufferedDraw(driftedTime, finalX, finalY, spaFreq, 0.128*contrast, m_monitorSize, m_monitorPosition);
+	if (m_isSampleOn == 1)
+	{
+		switch (m_valueScreenMode)
+		{
+		case 0:
+			pDlg->m_sampleScreen->constantDraw(0);
+			break;
+		case 1:
+			pDlg->m_sampleScreen->constantDraw(128);
+			break;
+		case 2:
+			pDlg->m_sampleScreen->constantDraw(255);
+			break;
+		case 3:
+			double driftedTime = pDlg->m_tab1_stimulus.m_driftSpeed * GetTickCount() * 0.0001;
+			double spaFreq = pDlg->m_tab1_stimulus.m_spatialFrequency;
+			double contrast = pDlg->m_tab1_stimulus.m_contrast;
+			double pixelRatio = m_footholdDiameter / m_calDiameter;
+			double finalX = pixelRatio*(-(m_calX - 1000) / 2000.0*m_dlgCamera.m_capture.get(CAP_PROP_FRAME_WIDTH) + m_stimulusX);
+			double finalY = pixelRatio*((m_calY - 1000) / 2000.0*m_dlgCamera.m_capture.get(CAP_PROP_FRAME_HEIGHT) - m_stimulusY);
+			pDlg->m_sampleScreen->bufferedDraw(driftedTime, finalX, finalY, spaFreq, 0.128*contrast, m_monitorSize, m_monitorPosition);
+			break;
+		}
+	}
 }
 
 
@@ -406,11 +453,57 @@ void COptometryDlg::OnViewShowsamplescreen()
 	}
 	else if (m_isSampleOn == 2)
 	{
-		m_sampleScreen->ShowWindow(SW_SHOW);
+		m_sampleScreen->OnInitDialog();
 		m_sampleThread->ResumeThread();
 
 		pMenu->ModifyMenu(ID_VIEW_SHOWSAMPLESCREEN, MF_BYCOMMAND, ID_VIEW_SHOWSAMPLESCREEN, _T("Hide Sample Screen"));
 
 		m_isSampleOn = 1;
 	}
+}
+
+
+void COptometryDlg::OnPress1()
+{
+	// TODO: 여기에 명령 처리기 코드를 추가합니다.
+	m_valueScreenMode = 0;
+	UpdateData(FALSE);
+}
+
+
+void COptometryDlg::OnPress2()
+{
+	// TODO: 여기에 명령 처리기 코드를 추가합니다.
+	m_valueScreenMode = 1;
+	UpdateData(FALSE);
+}
+
+
+void COptometryDlg::OnPress3()
+{
+	// TODO: 여기에 명령 처리기 코드를 추가합니다.
+	m_valueScreenMode = 2;
+	UpdateData(FALSE);
+}
+
+
+void COptometryDlg::OnPress4()
+{
+	// TODO: 여기에 명령 처리기 코드를 추가합니다.
+	m_valueScreenMode = 3;
+	UpdateData(FALSE);
+}
+
+
+void COptometryDlg::OnShowWindow(BOOL bShow, UINT nStatus)
+{
+	CDialogEx::OnShowWindow(bShow, nStatus);
+
+	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
+
+	OnViewShowsamplescreen();
+	OnViewShowsamplescreen();
+	OnViewShowscreen();
+	OnViewShowscreen();
+	OnFileOpencamera();
 }

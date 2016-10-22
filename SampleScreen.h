@@ -36,4 +36,5 @@ public:
 	CStatic m_drawSample;
 	CSliderCtrl m_sliderQuality;
 	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
+	void constantDraw(unsigned char brightness);
 };

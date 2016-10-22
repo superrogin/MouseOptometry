@@ -26,6 +26,13 @@ public:
 	void bufferedDraw(double driftedTime, int drawWidth, double centerX, double centerY, double spaFreq, double contrast, double monSize, double monPos);
 	int screenWidth;
 	int screenHeight;
-	void drawSlit(RGBQUAD* pRgb, int i, double mx, double my, double driftedTime, int drawWidth, double spaFreq, double contrast);
+	void drawSlit(RGBQUAD* pRgb, int i, double mx, double my, double driftedTime, double spaFreq, double contrast);
 	virtual void OnCancel();
+	void constantDraw(unsigned char brightness);
+	afx_msg void OnPress1();
+	afx_msg void OnPress2();
+	afx_msg void OnPress3();
+	afx_msg void OnPress4();
+	HACCEL m_hAccelTable;
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
 };

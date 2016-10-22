@@ -16,6 +16,9 @@ IMPLEMENT_DYNAMIC(CDialogTesting, CDialogEx)
 CDialogTesting::CDialogTesting(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_TAB_TESTING, pParent)
 {
+	m_startSpatialFrequency = 0;
+	m_startContrast = 0;
+	m_startDriftSpeed = 0;
 }
 
 CDialogTesting::~CDialogTesting()
@@ -31,7 +34,15 @@ void CDialogTesting::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_CHECK_DATE, m_ctrDate);
 	DDX_Control(pDX, IDC_CHECK_TIME, m_ctrTime);
 	DDX_Control(pDX, IDC_EDIT_SAVE_NAME, m_ctrSaveFileName);
-	DDX_Control(pDX, IDC_EDIT_SAVE_NAME2, m_ctrBaseFileName);
+	DDX_Control(pDX, IDC_EDIT_BASE_NAME, m_ctrBaseFileName);
+	DDX_Control(pDX, IDC_COMBO_TESTING_EYES, m_ctrCmbTestingEyes);
+	DDX_Control(pDX, IDC_COMBO_SEARCHING_ALGORITHMS, m_ctrCmbSearchingAlgorithms);
+	DDX_Control(pDX, IDC_BUTTON_YES, m_ctrYes);
+	DDX_Control(pDX, IDC_BUTTON_NO, m_ctrNo);
+	DDX_Control(pDX, IDC_BUTTON_RESET, m_ctrReset);
+	DDX_Control(pDX, IDC_BUTTON_DONE, m_ctrDone);
+	DDX_Control(pDX, IDC_BUTTON_START, m_ctrExperimentStart);
+	DDX_Control(pDX, IDC_CHECK_TRACKING, m_ctrTracking);
 }
 
 
@@ -42,6 +53,12 @@ BEGIN_MESSAGE_MAP(CDialogTesting, CDialogEx)
 	ON_BN_CLICKED(IDC_CHECK_DATE, &CDialogTesting::OnBnClickedCheckDate)
 	ON_BN_CLICKED(IDC_CHECK_TIME, &CDialogTesting::OnBnClickedCheckTime)
 	ON_EN_CHANGE(IDC_EDIT_BASE_NAME, &CDialogTesting::OnEnChangeEditBaseName)
+	ON_BN_CLICKED(IDC_BUTTON_START, &CDialogTesting::OnBnClickedButtonStart)
+	ON_BN_CLICKED(IDC_BUTTON_CONFIGURATION, &CDialogTesting::OnBnClickedButtonConfiguration)
+	ON_BN_CLICKED(IDC_BUTTON_YES, &CDialogTesting::OnBnClickedButtonYes)
+	ON_BN_CLICKED(IDC_BUTTON_NO, &CDialogTesting::OnBnClickedButtonNo)
+	ON_BN_CLICKED(IDC_BUTTON_RESET, &CDialogTesting::OnBnClickedButtonReset)
+	ON_BN_CLICKED(IDC_BUTTON_DONE, &CDialogTesting::OnBnClickedButtonDone)
 END_MESSAGE_MAP()
 
 
@@ -57,12 +74,22 @@ BOOL CDialogTesting::OnInitDialog()
 	HFONT hNewFont;
 	hNewFont = CreateFont(20, 0, 0, 0, 0, 0, 0, 0, HANGEUL_CHARSET, 3, 2, 1, VARIABLE_PITCH | FF_MODERN, _T("맑은 고딕"));
 	GetDlgItem(IDC_BUTTON_START)->SendMessage(WM_SETFONT, (WPARAM)hNewFont, (LPARAM)FALSE);
-	GetDlgItem(IDC_COMBO_MODE_SELECT)->SendMessage(WM_SETFONT, (WPARAM)hNewFont, (LPARAM)FALSE);
 
 	m_ctrCmbModeSelect.AddString(L"Auto");
 	m_ctrCmbModeSelect.AddString(L"Auto+MANUAL");
 	m_ctrCmbModeSelect.AddString(L"MANUAL");
 	m_ctrCmbModeSelect.SelectString(-1, L"Auto");
+
+	m_ctrCmbTestingEyes.AddString(L"Left(CCW)-Right(CW)");
+	m_ctrCmbTestingEyes.AddString(L"Right(CW)-Left(CCW)");
+	m_ctrCmbTestingEyes.AddString(L"Left(CCW)");
+	m_ctrCmbTestingEyes.AddString(L"Right(CW)");
+	m_ctrCmbTestingEyes.SelectString(-1, L"Left(CCW)-Right(CW)");
+
+	m_ctrCmbSearchingAlgorithms.AddString(L"Binary Search");
+	m_ctrCmbSearchingAlgorithms.AddString(L"Gradually Increase");
+	m_ctrCmbSearchingAlgorithms.AddString(L"Gradually Decrease");
+	m_ctrCmbSearchingAlgorithms.SelectString(-1, L"Binary Search");
 
 	TCHAR initialPath[_MAX_PATH];
 	GetModuleFileName(NULL, initialPath, sizeof initialPath);
@@ -77,6 +104,7 @@ BOOL CDialogTesting::OnInitDialog()
 	m_ctrBaseFileName.SetWindowTextW(L"Experiment");
 	m_ctrDate.SetCheck(TRUE);
 	m_ctrAutoIndex.SetCheck(TRUE);
+	m_ctrTracking.SetCheck(TRUE);
 	makeFileName();
 
 	return TRUE;  // return TRUE unless you set the focus to a control
@@ -216,3 +244,81 @@ void CDialogTesting::makeFileName()
 
 
 
+
+
+void CDialogTesting::OnBnClickedButtonStart()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+
+	if (d_pParent->m_testMode) // 강제종료
+	{
+		m_ctrCmbModeSelect.EnableWindow(TRUE);
+		m_ctrCmbSearchingAlgorithms.EnableWindow(TRUE);
+		m_ctrCmbTestingEyes.EnableWindow(TRUE);
+		m_ctrDone.EnableWindow(FALSE);
+		m_ctrReset.EnableWindow(FALSE);
+		m_ctrYes.EnableWindow(FALSE);
+		m_ctrNo.EnableWindow(FALSE);
+
+		m_ctrExperimentStart.SetWindowText(L"Experiment Start");
+
+		d_pParent->m_testMode = FALSE;
+	}
+	else // 실험 시작
+	{
+		m_ctrCmbModeSelect.EnableWindow(FALSE);
+		m_ctrCmbSearchingAlgorithms.EnableWindow(FALSE);
+		m_ctrCmbTestingEyes.EnableWindow(FALSE);
+		m_ctrDone.EnableWindow(TRUE);
+		m_ctrReset.EnableWindow(TRUE);
+
+		m_ctrExperimentStart.SetWindowText(L"Force Stop (Cancel)");
+
+		d_pParent->m_testMode = TRUE;
+
+		if (m_ctrCmbModeSelect.GetCurSel()==2)
+		{
+			m_ctrYes.EnableWindow(TRUE);
+			m_ctrNo.EnableWindow(TRUE);
+		}
+
+		/*
+		while (true)
+		{
+
+		}*/
+	}
+	
+}
+
+
+void CDialogTesting::OnBnClickedButtonConfiguration()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	CDialogTestConfigure cfgDlg;
+	cfgDlg.DoModal();
+}
+
+
+void CDialogTesting::OnBnClickedButtonYes()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+}
+
+
+void CDialogTesting::OnBnClickedButtonNo()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+}
+
+
+void CDialogTesting::OnBnClickedButtonReset()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+}
+
+
+void CDialogTesting::OnBnClickedButtonDone()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+}

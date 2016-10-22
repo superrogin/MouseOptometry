@@ -20,6 +20,7 @@ CCameraDialog::CCameraDialog(CWnd* pParent /*=NULL*/)
 	m_headX = 0;
 	m_headY = 0;
 	m_zoom = 1.0;
+	m_isVideo = TRUE;
 }
 
 CCameraDialog::~CCameraDialog()
@@ -80,9 +81,15 @@ void CCameraDialog::displayImage(Mat* image, CDC* pDC)
 
 void CCameraDialog::openCamera()
 {
-	m_capture = VideoCapture(0);
-	if (m_capture.isOpened()) setCameraFPS(1);
-	else AfxMessageBox(_T("Camera open failed"));
+	if (m_isVideo)
+	{
+		KillTimer(1394);
+		m_capture.release();
+		m_capture = VideoCapture(0);
+		if (m_capture.isOpened()) setCameraFPS(1);
+		else AfxMessageBox(_T("Camera open failed"));
+		m_isVideo = FALSE;
+	}
 }
 
 
@@ -90,6 +97,9 @@ void CCameraDialog::openVideoFile()
 {
 	CFileDialog dlg(TRUE, NULL, NULL, OFN_HIDEREADONLY, _T("Video Files(*.avi, *.mp4, ...) | *.avi;*.mp4;*.mov;*.wmv | All Files(*.*)|*.*||"));
 	if (IDOK == dlg.DoModal()) {
+		m_isVideo = TRUE;
+		KillTimer(1394);
+		m_capture.release();
 		m_strPath = CT2CA(dlg.GetPathName().GetString());
 		m_capture = VideoCapture(m_strPath);
 		if (m_capture.isOpened()) setCameraFPS(1);
@@ -115,8 +125,16 @@ void CCameraDialog::OnTimer(UINT_PTR nIDEvent)
 		}
 		else {
 
-			if (((COptometryDlg*)GetParent())->m_testMode)
+			if (d_pParent->m_testMode)
 			{
+				if (!m_isExperimentStarted)
+				{
+					m_prevMc.x = 0;
+					m_prevMc.y = 0;
+					m_prevPntNose.x = 1;
+					m_prevPntNose.y = 1;
+				}
+				bool isRecognized = FALSE;
 				Scalar tempVal = mean(grab);
 				int vals = (tempVal.val[0] + tempVal.val[1] + tempVal.val[2]) / 3;
 				if (vals < 90) grab = 2 * grab;
@@ -152,6 +170,10 @@ void CCameraDialog::OnTimer(UINT_PTR nIDEvent)
 						++itc;
 				}
 
+
+				Point2f mc,pntNose;
+
+				//Recognition
 				if (contours.size())
 				{
 					RotatedRect e;
@@ -176,10 +198,8 @@ void CCameraDialog::OnTimer(UINT_PTR nIDEvent)
 						}
 						else i++;
 					}
-
 					if (cntrs.size())
 					{
-						Point2f pntNose;
 						if (contourArea(cntrs[0]))
 						{
 							Moments mu = moments(cntrs[0]);
@@ -194,24 +214,9 @@ void CCameraDialog::OnTimer(UINT_PTR nIDEvent)
 
 							if (contourArea(cntrs[0]))
 							{
+								isRecognized = TRUE;
 								mu = moments(cntrs[0]);
-								Point2f mc = Point2f(mu.m10 / mu.m00, mu.m01 / mu.m00);
-
-								circle(tmpMsk, mc, 5, Scalar(0, 0, 0), -1);
-								circle(grab, mc, 5, Scalar(0, 0, 255), -1);
-								line(grab, mc, pntNose, Scalar(0, 0, 255), 2.5);
-
-								double t = (double)GetTickCount() / 1000.;
-
-								double speed = 3;
-								/*
-								for (int ii = 0; ii < 12; ii++)
-								{
-								ellipse(grab, mc, Size(200, 200), 0, speed * 15 * t + ii*30, speed * 15 * t + 15 + ii * 30, Scalar(0, 0, 255), -1);
-								}*/
-
-								double angVal = atan2(pntNose.y - mc.y, pntNose.x - mc.x) * 180 / M_PI;
-
+								mc = Point2f(mu.m10 / mu.m00, mu.m01 / mu.m00);
 							}
 						}
 					}
@@ -225,7 +230,24 @@ void CCameraDialog::OnTimer(UINT_PTR nIDEvent)
 					//line(grab, (vertices[0]+ vertices[1])/2, (vertices[2] + vertices[3]) / 2, Scalar(0, 0, 255),5);
 					//line(grab, (vertices[0] + vertices[1]) - (vertices[2] + vertices[3]) / 2, (vertices[2] + vertices[3]) - (vertices[0] + vertices[1]) / 2, Scalar(0, 0, 255), 5);	
 				}
+
+				//
+				if (!isRecognized)
+				{
+					mc = m_prevMc;
+					pntNose = m_prevPntNose;
+				}
+				circle(grab, mc, 5, Scalar(0, 0, 255), -1);
+				line(grab, mc, pntNose, Scalar(0, 0, 255), 2.5);
+
+				if (d_pParent->m_tab3_testing.m_ctrTracking.GetCheck())
+				{
+					d_pParent->m_stimulusX = mc.x - grab.cols / 2;
+					d_pParent->m_stimulusY = mc.y - grab.rows / 2;
+				}
+				double angVal = atan2(pntNose.y - mc.y, pntNose.x - mc.x) * 180 / M_PI;
 			}
+			else m_isExperimentStarted = FALSE;
 			//imshow("gray", tmpDisp);
 
 			// Calibration marker
@@ -249,7 +271,7 @@ void CCameraDialog::OnTimer(UINT_PTR nIDEvent)
 				int gValue = GetGValue(d_pParent->m_tab1_stimulus.m_markerColor);
 				int bValue = GetBValue(d_pParent->m_tab1_stimulus.m_markerColor);
 
-				Mat stimMarker(grab.rows, grab.cols, CV_8UC3);
+				Mat stimMarker(grab.rows, grab.cols, CV_8UC3); //Stimulation Marker
 
 				double centerX = d_pParent->m_stimulusX + 0.5*grab.cols;
 				double centerY = d_pParent->m_stimulusY + 0.5*grab.rows;
@@ -313,10 +335,12 @@ void CCameraDialog::OnTimer(UINT_PTR nIDEvent)
 void CCameraDialog::OnCancel()
 {
 	// TODO: 여기에 특수화된 코드를 추가 및/또는 기본 클래스를 호출합니다.
-	KillTimer(1394);
-	m_capture.release();
+	//KillTimer(1394);
+	//m_capture.release();
 
-	CDialogEx::OnCancel();
+	ShowWindow(SW_HIDE);
+
+	//CDialogEx::OnCancel();
 }
 
 

@@ -57,6 +57,9 @@
     <ClInclude Include="SampleScreen.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="DialogTestConfigure.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MouseOptometry.cpp">
@@ -90,6 +93,9 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="SampleScreen.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogTestConfigure.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
