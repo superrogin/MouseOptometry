@@ -162,7 +162,7 @@ BOOL CSampleScreen::OnInitDialog()
 void CSampleScreen::OnCancel()
 {
 	// TODO: 여기에 특수화된 코드를 추가 및/또는 기본 클래스를 호출합니다.
-	((COptometryDlg*)GetParent())->OnViewShowsamplescreen();
+	d_pParent->OnViewShowsamplescreen();
 
 	//CDialogEx::OnCancel();
 }
@@ -207,4 +207,43 @@ void CSampleScreen::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 	}
 
 	CDialogEx::OnHScroll(nSBCode, nPos, pScrollBar);
+}
+
+
+void CSampleScreen::constantDraw(unsigned char brightness)
+{
+
+	CDC* thisDC = GetDlgItem(IDC_PICTURE_SAMPLE)->GetDC(); //GetDC();
+	CDC memDC;
+	memDC.CreateCompatibleDC(thisDC);
+	CBitmap *pOldBitmap, bitmap;
+	bitmap.CreateCompatibleBitmap(thisDC, 1, 1);
+
+	pOldBitmap = memDC.SelectObject(&bitmap);
+
+	BITMAP bm;
+	bitmap.GetObject(sizeof(BITMAP), (LPSTR)&bm);
+	BYTE *pData = NULL;
+	pData = (BYTE*)malloc(bm.bmWidthBytes * bm.bmHeight);
+	memset(pData, 0x00, bm.bmWidthBytes * bm.bmHeight);
+	bitmap.GetBitmapBits(bm.bmWidthBytes * bm.bmHeight, pData);
+	RGBQUAD *pRgb = (RGBQUAD*)pData;
+
+	unsigned char penColor = brightness;
+	pRgb[0].rgbRed = penColor;
+	pRgb[0].rgbGreen = penColor;
+	pRgb[0].rgbBlue = penColor;
+
+	bitmap.SetBitmapBits(bm.bmWidthBytes * bm.bmHeight, pData);
+	CDC tmpDC;
+	thisDC->StretchBlt(0, 0, screenWidth, screenHeight, &memDC, 0, 0, 1, 1, SRCCOPY);
+	memDC.SelectObject(pOldBitmap);
+
+	free(pData);
+	pData = NULL;
+
+	tmpDC.DeleteDC();
+	memDC.DeleteDC();
+	thisDC->DeleteDC();
+	bitmap.DeleteObject();
 }

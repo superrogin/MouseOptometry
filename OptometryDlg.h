@@ -82,4 +82,11 @@ public:
 	double m_stimulusY;
 	double m_monitorSize;
 	double m_monitorPosition;
+	afx_msg void OnPress1();
+	afx_msg void OnPress2();
+	afx_msg void OnPress3();
+	afx_msg void OnPress4();
+	HACCEL m_hAccelTable;
+	int m_valueScreenMode;
+	afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
 };

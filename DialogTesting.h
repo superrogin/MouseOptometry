@@ -1,5 +1,6 @@
 #pragma once
 #include "afxwin.h"
+#include "DialogTestConfigure.h"
 
 
 // CDialogTesting 대화 상자입니다.
@@ -37,4 +38,21 @@ public:
 	afx_msg void OnBnClickedCheckTime();
 	void makeFileName();
 	afx_msg void OnEnChangeEditBaseName();
+	afx_msg void OnBnClickedButtonStart();
+	CComboBox m_ctrCmbTestingEyes;
+	CComboBox m_ctrCmbSearchingAlgorithms;
+	afx_msg void OnBnClickedButtonConfiguration();
+	int m_startSpatialFrequency;
+	int m_startContrast;
+	int m_startDriftSpeed;
+	afx_msg void OnBnClickedButtonYes();
+	afx_msg void OnBnClickedButtonNo();
+	afx_msg void OnBnClickedButtonReset();
+	afx_msg void OnBnClickedButtonDone();
+	CButton m_ctrYes;
+	CButton m_ctrNo;
+	CButton m_ctrReset;
+	CButton m_ctrDone;
+	CButton m_ctrExperimentStart;
+	CButton m_ctrTracking;
 };

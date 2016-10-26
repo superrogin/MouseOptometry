@@ -198,6 +198,7 @@
     <ClInclude Include="DialogCamera.h" />
     <ClInclude Include="DialogResult.h" />
     <ClInclude Include="DialogStimulus.h" />
+    <ClInclude Include="DialogTestConfigure.h" />
     <ClInclude Include="DialogTesting.h" />
     <ClInclude Include="MouseOptometry.h" />
     <ClInclude Include="OptometryDlg.h" />
@@ -213,6 +214,7 @@
     <ClCompile Include="DialogCamera.cpp" />
     <ClCompile Include="DialogResult.cpp" />
     <ClCompile Include="DialogStimulus.cpp" />
+    <ClCompile Include="DialogTestConfigure.cpp" />
     <ClCompile Include="DialogTesting.cpp" />
     <ClCompile Include="MouseOptometry.cpp" />
     <ClCompile Include="OptometryDlg.cpp" />
